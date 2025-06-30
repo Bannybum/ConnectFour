@@ -1,34 +1,40 @@
 using UnityEngine;
-using static UnityEngine.Rendering.DebugUI.Table;
 using TMPro;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
+    public TextMeshProUGUI TurnText;
+    public TextMeshProUGUI infoText;
+    public TextMeshProUGUI vitoriaText;
 
     public GameObject ficVermelha;
     public GameObject ficAmarela;
-    public int[,] board = new int[7, 6]; // 0 = vazio, 1 = vermelho, 2 = amarelo
-    private float tamFicha = 1f;
+    public GameObject telaVitória;
+    public Button botao;
 
+    public int[,] board = new int[7, 6]; // 0 = vazio, 1 = vermelho, 2 = amarelo
+
+    private float tamFicha = 1f;
     private int currentPlayer = 1;
     private bool acabou = false;
+    private bool inputTravado = false;
 
 
-
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         infoText.text = "Jogador Vermelho começa!";
-        botao.onClick.AddListener(Reinicio);
+        TurnText.text = "Vez das fichas vermelhas";
+        TurnText.color = Color.red;
         telaVitória.SetActive(false);
+        botao.onClick.AddListener(Reinicio);
     }
 
-    // Update is called once per frame
     void Update()
     {
-        if (acabou) return;
+        if (acabou || inputTravado) return;
+
         if (Input.GetMouseButtonDown(0))
         {
             Vector3 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
@@ -54,29 +60,43 @@ public class GameManager : MonoBehaviour
                 Vector3 targetPos = new Vector3(coluna * tamFicha, -linha * tamFicha, 0);
 
                 GameObject disc = Instantiate(prefab, spawnPos, Quaternion.identity);
-                StartCoroutine(anim(disc, targetPos)); ;
-
-                if (SeraseVenceu(coluna, linha))
-                {
-                    infoText.text = "";
-                    telaVitória.SetActive(true);
-                    vitoriaText.text = "Jogador " + (currentPlayer == 1 ? "Vermelho" : "Amarelo") + " venceu!";
-                    acabou = true;
-                }
-                
-
-                currentPlayer = 3 - currentPlayer; // Alterna entre 1 e 2
+                inputTravado = true;
+                StartCoroutine(AnimacaoFinal(disc, targetPos, coluna, linha));
                 return;
             }
         }
     }
 
+    System.Collections.IEnumerator AnimacaoFinal(GameObject disc, Vector3 destino, int coluna, int linha)
+    {
+        // Anima a ficha descendo
+        yield return StartCoroutine(anim(disc, destino));
+
+        // Pequeno delay para dar tempo visual antes da vitória
+        yield return new WaitForSeconds(0.2f);
+
+        if (SeraseVenceu(coluna, linha))
+        {
+            infoText.text = "";
+            telaVitória.SetActive(true);
+            vitoriaText.text = "Jogador " + (currentPlayer == 1 ? "Vermelho" : "Amarelo") + " venceu!";
+            TurnText.text = "";
+            acabou = true;
+        }
+        else
+        {
+            currentPlayer = 3 - currentPlayer;
+            TurnText.text = "Vez das fichas " + (currentPlayer == 1 ? "vermelhas" : "amarelas");
+            TurnText.color = currentPlayer == 1 ? Color.red : Color.yellow;
+            inputTravado = false;
+        }
+    }
 
     bool SeraseVenceu(int col, int linha)
     {
         int player = board[col, linha];
 
-        // horiz, vert, diag/
+        // horizontal, vertical, diagonal
         if (CountInDirection(col, linha, 1, 0, player) + CountInDirection(col, linha, -1, 0, player) >= 3) return true;
         if (CountInDirection(col, linha, 0, 1, player) + CountInDirection(col, linha, 0, -1, player) >= 3) return true;
         if (CountInDirection(col, linha, 1, 1, player) + CountInDirection(col, linha, -1, -1, player) >= 3) return true;
@@ -114,17 +134,23 @@ public class GameManager : MonoBehaviour
         disc.transform.position = target;
     }
 
-    //------------------ SCRIPT da UI -----------------------------/
-
-    public TextMeshProUGUI infoText;
-    public GameObject telaVitória;
-    public TextMeshProUGUI vitoriaText;
-    public Button botao;
-
-
     void Reinicio()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        telaVitória.SetActive(false);         // esconde a tela de vitória
+        TurnText.text = "Vez das fichas vermelhas";
+        TurnText.color = Color.red;
+        infoText.text = "Jogador Vermelho começa!";
+
+        currentPlayer = 1;
+        acabou = false;
+        inputTravado = false;
+
+        // limpa o board visual e lógico
+        foreach (GameObject ficha in GameObject.FindGameObjectsWithTag("Ficha"))
+        {
+            Destroy(ficha);
+        }
+
+        board = new int[7, 6]; // zera o tabuleiro lógico
     }
 }
-

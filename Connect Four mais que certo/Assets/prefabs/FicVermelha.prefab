@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 5652015746873844659}
   m_Layer: 0
   m_Name: FicVermelha
-  m_TagString: Untagged
+  m_TagString: Ficha
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
